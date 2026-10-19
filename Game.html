@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Space Shooter</title>
+<style>
+  body{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden}
+  canvas{border:2px solid #0ff;box-shadow:0 0 20px #0ff}
+</style>
+</head>
+<body>
+<canvas id="c" width="600" height="700"></canvas>
+<script>
+const cv=document.getElementById('c'),x=cv.getContext('2d');
+const P={x:300,y:640,hp:100,cd:0},B=[],A=[],E=[],K={};
+let S=0,GO=false,ST=60;
+document.addEventListener('keydown',e=>{K[e.key.toLowerCase()]=1;if(e.key===' '&&!GO){if(P.cd<=0){B.push({x:P.x,y:P.y-25,vy:-9,p:1});P.cd=12}}if(e.key==='Enter'&&GO)reset()});
+document.addEventListener('keyup',e=>K[e.key.toLowerCase()]=0);
+function reset(){P.hp=100;P.x=300;B.length=A.length=E.length=0;S=0;GO=false}
+function boom(x,y,cl){for(let i=0;i<15;i++)E.push({x,y,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,l:30,cl})}
+function loop(){
+  if(!GO){
+    if((K['arrowleft']||K['a'])&&P.x>20)P.x-=6;
+    if((K['arrowright']||K['d'])&&P.x<580)P.x+=6;
+    if(P.cd>0)P.cd--;
+    if(--ST<=0){A.push({x:Math.random()*560+20,y:-20,hp:50,sp:1.2+Math.random(),t:60+Math.random()*120,w:0});ST=80}
+    for(let i=B.length-1;i>=0;i--){B[i].y+=B[i].vy;if(B[i].y<0)B.splice(i,1)}
+    for(let i=A.length-1;i>=0;i--){const a=A[i];a.y+=a.sp;a.w+=.05;a.x+=Math.sin(a.w)*1.2;
+      if(a.y>750){A.splice(i,1);continue}
+      if(--a.t<=0){B.push({x:a.x,y:a.y+20,vy:5,p:0});a.t=150}
+    }
+    for(let i=B.length-1;i>=0;i--){const b=B[i];if(!b.p)continue;
+      for(let j=A.length-1;j>=0;j--){const a=A[j];
+        if(Math.abs(b.x-a.x)<20&&Math.abs(b.y-a.y)<20){a.hp-=10;B.splice(i,1);boom(b.x,b.y,'#0f0');
+          if(a.hp<=0){boom(a.x,a.y,'#f80');A.splice(j,1);S+=10}break}
+      }
+    }
+    for(let i=B.length-1;i>=0;i--){const b=B[i];if(b.p)continue;
+      if(Math.abs(b.x-P.x)<20&&Math.abs(b.y-P.y)<20){P.hp-=5;B.splice(i,1);boom(b.x,b.y,'#f00');if(P.hp<=0){P.hp=0;GO=true;boom(P.x,P.y,'#0ff')}}
+    }
+    for(let i=A.length-1;i>=0;i--){const a=A[i];
+      if(Math.abs(a.x-P.x)<30&&Math.abs(a.y-P.y)<30){P.hp-=20;boom(a.x,a.y,'#f80');A.splice(i,1);if(P.hp<=0){P.hp=0;GO=true;boom(P.x,P.y,'#0ff')}}
+    }
+    for(let i=E.length-1;i>=0;i--){E[i].x+=E[i].vx;E[i].y+=E[i].vy;E[i].l--;if(E[i].l<=0)E.splice(i,1)}
+  }
+  // DRAW
+  x.fillStyle='#000022';x.fillRect(0,0,600,700);
+  for(let i=0;i<100;i++){x.fillStyle='#fff';x.globalAlpha=.3+Math.random()*.5;x.fillRect((i*73)%600,(Date.now()/20+i*47)%700,2,2)}
+  x.globalAlpha=1;
+  E.forEach(p=>{x.fillStyle=p.cl;x.globalAlpha=p.l/30;x.fillRect(p.x-2,p.y-2,4,4)});x.globalAlpha=1;
+  A.forEach(a=>{
+    x.fillStyle='#0f0';x.shadowColor='#0f0';x.shadowBlur=12;
+    x.beginPath();x.ellipse(a.x,a.y,20,16,0,0,7);x.fill();
+    x.fillStyle='#f00';x.shadowBlur=0;x.beginPath();x.arc(a.x-7,a.y-3,3,0,7);x.arc(a.x+7,a.y-3,3,0,7);x.fill();
+    x.fillStyle='#300';x.fillRect(a.x-20,a.y-28,40,4);
+    x.fillStyle='#f00';x.fillRect(a.x-20,a.y-28,40*(a.hp/50),4);
+  });
+  x.shadowBlur=10;
+  B.forEach(b=>{x.fillStyle=b.p?'#0ff':'#f0f';x.shadowColor=x.fillStyle;x.fillRect(b.x-2,b.y-6,4,10)});
+  x.shadowBlur=0;
+  if(!GO){x.fillStyle='#0ff';x.shadowColor='#0ff';x.shadowBlur=15;
+    x.beginPath();x.moveTo(P.x,P.y-20);x.lineTo(P.x+20,P.y+20);x.lineTo(P.x-20,P.y+20);x.closePath();x.fill();
+    x.shadowBlur=0;x.fillStyle='#fff';x.beginPath();x.arc(P.x,P.y-5,5,0,7);x.fill();
+  }
+  x.fillStyle='#300';x.fillRect(10,10,200,25);
+  x.fillStyle=P.hp>50?'#0f0':P.hp>25?'#ff0':'#f00';x.fillRect(10,10,200*(P.hp/100),25);
+  x.fillStyle='#fff';x.font='bold 14px Arial';x.textAlign='left';x.fillText('HP: '+P.hp+'/100',20,28);
+  x.textAlign='right';x.fillStyle='#0ff';x.font='bold 20px Arial';x.fillText('SCORE: '+S,580,30);
+  if(GO){x.fillStyle='rgba(0,0,0,.7)';x.fillRect(0,0,600,700);
+    x.textAlign='center';x.fillStyle='#f00';x.font='bold 48px Arial';x.fillText('GAME OVER',300,330);
+    x.fillStyle='#fff';x.font='24px Arial';x.fillText('Score: '+S,300,380);
+    x.fillStyle='#0ff';x.font='18px Arial';x.fillText('Tekan ENTER untuk main lagi',300,430)}
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+  </html>
